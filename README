@@ -1,0 +1,25 @@
+Pidgin plugin budicons
+----------------------
+
+This package provides a pidgin pluging that synchronizes your pidgin contacts
+based on a remote export (JSON). The remote export is expected to provide the
+names and icons to use for your buddies.
+
+Before the plugin can be compile it's important to edit the file "config.h"and
+to update the variable holding the location of the JSON file (CONF_URL_JSON).
+
+    #define CONF_URL_JSON "https://localhost/staff.json"
+
+To compile under Ubuntu/Debian do:
+
+    sudo apt-get install build-essential libtool libsoup2.4-dev libglib2.0-dev libjson-glib-dev pidgin-dev
+
+To install the plugin in your home account (DO NOT do this as root):
+
+    make install
+
+To execute the plugin start pidgin and open the plugins dialog:
+
+    Main Window > Tools > Plugins or Ctrl+U
+
+Then enable the plugin named "Buddy Icons Download". Enjoy!
