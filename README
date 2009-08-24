@@ -5,10 +5,14 @@ This package provides a pidgin pluging that synchronizes your pidgin contacts
 based on a remote export (JSON). The remote export is expected to provide the
 names and icons to use for your buddies.
 
+
+Compiling and installing
+-----------------------
+
 Before the plugin can be compile it's important to edit the file "config.h"and
 to update the variable holding the location of the JSON file (CONF_URL_JSON).
 
-    #define CONF_URL_JSON "https://localhost/staff.json"
+    #define CONF_URL_JSON "https://localhost/buddies.json"
 
 To compile under Ubuntu/Debian do:
 
@@ -23,3 +27,41 @@ To execute the plugin start pidgin and open the plugins dialog:
     Main Window > Tools > Plugins or Ctrl+U
 
 Then enable the plugin named "Buddy Icons Download". Enjoy!
+
+
+JSON file
+---------
+
+This plugin requires that a JSON file is provided in order to update the Pidgin
+buddies. The format of the file is very simple and consists of a list of
+records (an array of small hashes). Where each record represents a buddy and
+holds the information required for updating the corresponding Pidgin buddy.
+
+Records consists of aa simple hash which has only three data members:
+	- id: the Pidgin buddy name (the buddie's account identifier)
+	- name: the real name of the buddy, what Pidgin will display
+	- image: the image of the buddy
+
+The JSON records are matched with Pidgin buddies based on the id provided by
+the JSON structure and the buddy name provided by Pidgin. This is the only way
+for which a match is done.
+
+Example of a JSON export:
+
+	[
+		// First buddy
+		{
+			id: "emmanuel.rodriguez@gmail.com",
+			name: "Emmanuel Rodriguez",
+			image: "http://www.gravatar.com/avatar/bea04d5874da7c62c093c1d38b40c9fa.png",
+		},
+
+		// Second buddy
+		{
+			id: "agent-007@mi6.gov.uk",
+			name: "James Bond",
+			image: "http://upload.wikimedia.org/wikipedia/en/c/c5/Fleming007impression.jpg",
+		},
+
+		// I hope that you get the idea!
+	]
