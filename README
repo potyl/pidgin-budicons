@@ -1,7 +1,7 @@
 Pidgin plugin budicons
 ----------------------
 
-This package provides a pidgin pluging that synchronizes your pidgin contacts
+This package provides a Pidgin pluging that synchronizes your Pidgin contacts
 based on a remote export (JSON). The remote export is expected to provide the
 names and icons to use for your buddies.
 
@@ -22,7 +22,7 @@ To install the plugin in your home account (DO NOT do this as root):
 
     make install
 
-To execute the plugin start pidgin and open the plugins dialog:
+To execute the plugin start Pidgin and open the plugins dialog:
 
     Main Window > Tools > Plugins or Ctrl+U
 
