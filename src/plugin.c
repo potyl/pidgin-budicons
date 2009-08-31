@@ -43,6 +43,11 @@
 #define PLUGIN_ID_NAME  "budicons"
 #define PLUGIN_ID       PLUGIN_ID_TYPE "-" PLUGIN_ID_USER "-" PLUGIN_ID_NAME
 
+// Plugin preferences
+#define PLUGIN_PREFS_BASE       "/plugins/" PLUGIN_ID_TYPE "/" PLUGIN_ID_NAME
+#define PLUGIN_PREFS(path)      PLUGIN_PREFS_BASE "/" path
+#define PLUGIN_PREFS_URL_JSON   PLUGIN_PREFS("url_json")
+
 #define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
 
 //
@@ -282,7 +287,7 @@ budicons_plugin_load (PurplePlugin *purple) {
 
 
 	// Download the JSON file (asynchronously)
-	const gchar *url = CONF_URL_JSON;
+	const gchar *url = purple_prefs_get_string(PLUGIN_PREFS_URL_JSON);
 	if (url == NULL || EQ(url, "")) {
 		g_print("No CONF_URL_JSON was provided\n");
 		return TRUE;
@@ -350,16 +355,53 @@ budicons_plugin_unload (PurplePlugin *purple) {
 //
 static void
 budicons_plugin_init (PurplePlugin *purple) {
-	// Empty
+
+	// Create the section
+	purple_prefs_add_none(PLUGIN_PREFS_BASE);
+
+	purple_prefs_add_string(PLUGIN_PREFS_URL_JSON, CONF_URL_JSON);
+
 	return;
 }
 
+
+//
+// GUI for the plugin preferences
+//
+static PurplePluginPrefFrame*
+budicons_pref_frame (PurplePlugin *plugin) {
+
+	PurplePluginPrefFrame *frame = purple_plugin_pref_frame_new();
+
+	// Frame title
+	purple_plugin_pref_frame_add(frame, purple_plugin_pref_new_with_label(PLUGIN_NAME));
+
+	// JSON URL
+	purple_plugin_pref_frame_add(frame, purple_plugin_pref_new_with_name_and_label(PLUGIN_PREFS_URL_JSON, "JSON URL"));
+
+	return frame;
+}
+
+
+//
+// Purple plugin preferences dialog
+//
+static PurplePluginUiInfo budicons_prefs_info = {
+	budicons_pref_frame,
+	0,    // Reserverd for page_num
+	NULL, // Reserved for frame
+
+	NULL, // Reserved 1
+	NULL, // Reserved 2
+	NULL, // Reserved 3
+	NULL, // Reserved 4
+};
 
 
 //
 // Purple plugin definition
 //
-static PurplePluginInfo info = {
+static PurplePluginInfo budicons_info = {
 	PURPLE_PLUGIN_MAGIC,
 	PURPLE_MAJOR_VERSION,
 	PURPLE_MINOR_VERSION,
@@ -386,10 +428,10 @@ static PurplePluginInfo info = {
 	budicons_plugin_unload,
 	NULL,
 
-	NULL, // ui_info
-	NULL, // extra_info
-	NULL, // pres_info
-	NULL, // actions callback
+	NULL,                 // ui_info
+	NULL,                 // extra_info
+	&budicons_prefs_info, // prefs_info
+	NULL,                 // actions callback
 
 	NULL, // reserved 1
 	NULL, // reserved 2
@@ -401,4 +443,4 @@ static PurplePluginInfo info = {
 //
 // Register the plugin
 //
-PURPLE_INIT_PLUGIN(budicons, budicons_plugin_init, info)
+PURPLE_INIT_PLUGIN(budicons, budicons_plugin_init, budicons_info)
