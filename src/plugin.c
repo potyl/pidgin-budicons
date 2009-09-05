@@ -217,7 +217,6 @@ budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy) {
 		return NULL;
 	}
 	g_print("Download of %s\n", user->image);
-	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
 	return message;
 }
 
@@ -366,7 +365,6 @@ budicons_plugin_load (PurplePlugin *purple) {
 		g_print("URL %s can't be parsed\n", url);
 		return TRUE;
 	}
-//	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
 	soup_session_queue_message(plugin->session, message, budicons_got_json_response, plugin);
 
 //FIXME don't build the list yet. Wait for the JSON file to be downloaded. If
