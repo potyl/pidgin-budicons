@@ -203,6 +203,7 @@ budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy) {
 	}
 
 	// Check if the buddy has already an image
+	if (user->image == NULL) {return NULL;}
 	PurpleBuddyIcon *icon = purple_buddy_icons_find(buddy->account, buddy->name);
 	if (icon != NULL) {
 		// This buddy has already an icon
