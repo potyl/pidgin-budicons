@@ -7,7 +7,7 @@ names and icons to use for your buddies.
 
 
 Compiling and installing
------------------------
+------------------------
 
 Before the plugin can be compile it's important to edit the file "config.h"and
 to update the variable holding the location of the JSON file (CONF_URL_JSON).
