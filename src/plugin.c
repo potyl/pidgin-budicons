@@ -441,6 +441,12 @@ budicons_plugin_unload (PurplePlugin *purple) {
 	purple->extra = NULL;
 
 	if (plugin) {
+		purple_signal_disconnect(
+			purple_blist_get_handle(),
+			"buddy-added",
+			plugin->purple,
+			PURPLE_CALLBACK(budicons_buddy_added_callback)
+		);
 		if (plugin->session)  g_object_unref(plugin->session);
 		if (plugin->buddies)  g_slist_free(plugin->buddies);
 		if (plugin->users)    g_hash_table_destroy(plugin->users);
