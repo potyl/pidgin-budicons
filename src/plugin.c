@@ -59,7 +59,6 @@ typedef struct _BudiconsPlugin {
 	GHashTable   *users;
 	GSList       *buddies;
 	GSList       *buddy_iter; // Do not free as this is an iterator
-	gint         *workers;
 } BudiconsPlugin;
 
 
@@ -285,7 +284,6 @@ budicons_worker_iter (BudiconsWorker *worker) {
 
 	// End of this worker as there are no more users to process
 	g_print("[%d] End of worker\n", worker->id);
-	--plugin->workers;
 	g_free(worker);
 	return;
 }
@@ -352,7 +350,6 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 		g_print("[%d] Started a new worker\n", worker->id);
 
 		budicons_worker_iter(worker);
-		++plugin->workers;
 
 		// We have workers running
 		quit = FALSE;
