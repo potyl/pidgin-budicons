@@ -268,7 +268,6 @@ budicons_worker_iter (BudiconsWorker *worker) {
 static void
 budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer data) {
 	BudiconsPlugin *plugin = (BudiconsPlugin *) data;
-	gboolean quit = TRUE;
 
 	{
 		char *url = soup_uri_to_string(soup_message_get_uri(message), FALSE);
@@ -304,7 +303,38 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 	}
 
 
-	// Start a few workers that will process the buddies
+	// Register a callback for every new buddy added
+	purple_signal_connect(
+		purple_blist_get_handle(),
+		"buddy-added",
+		plugin->purple,
+		PURPLE_CALLBACK(budicons_buddy_added_callback),
+		plugin
+	);
+
+
+	// Collect the buddies to process
+	PurpleBuddyList *list = purple_get_blist();
+	if (list == NULL) {return;}
+
+	plugin->buddies = NULL;
+	for (PurpleBlistNode *group = list->root; group; group = group->next) {
+		if (! PURPLE_BLIST_NODE_IS_GROUP(group)) {continue;}
+
+		for (PurpleBlistNode *contact = group->child; contact; contact = contact->next) {
+			if (! PURPLE_BLIST_NODE_IS_CONTACT(contact)) {continue;}
+
+			for (PurpleBlistNode *blist = contact->child; blist; blist = blist->next) {
+				if (! PURPLE_BLIST_NODE_IS_BUDDY(blist)) {continue;}
+
+				PurpleBuddy *buddy = (PurpleBuddy *) blist;
+				plugin->buddies = g_slist_prepend(plugin->buddies, buddy);
+			}
+		}
+	}
+
+
+	// Start a few workers that will process the buddies registered so far
 	plugin->buddy_iter = plugin->buddies;
 	for (guint i = 0; i < CONF_WORKERS; ++i) {
 
@@ -318,20 +348,7 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 		g_print("[%d] Started a new worker\n", worker->id);
 
 		budicons_worker_iter(worker);
-
-		// We have workers running
-		quit = FALSE;
 	}
-
-
-	// Register a callback for every new buddy added
-	purple_signal_connect(
-		purple_blist_get_handle(),
-		"buddy-added",
-		plugin->purple,
-		PURPLE_CALLBACK(budicons_buddy_added_callback),
-		plugin
-	);
 }
 
 
@@ -366,32 +383,6 @@ budicons_plugin_load (PurplePlugin *purple) {
 		return TRUE;
 	}
 	soup_session_queue_message(plugin->session, message, budicons_got_json_response, plugin);
-
-//FIXME don't build the list yet. Wait for the JSON file to be downloaded. If
-//      the download fails then there's nothing to do. If the download is
-//      successful and users are added in the meanwhile there's nothing that we
-//      can do.
-	// Find the buddies to process
-	PurpleBuddyList *list = purple_get_blist();
-	if (list != NULL) {
-
-		plugin->buddies = NULL;
-
-		for (PurpleBlistNode *group = list->root; group; group = group->next) {
-			if (! PURPLE_BLIST_NODE_IS_GROUP(group)) {continue;}
-
-			for (PurpleBlistNode *contact = group->child; contact; contact = contact->next) {
-				if (! PURPLE_BLIST_NODE_IS_CONTACT(contact)) {continue;}
-
-				for (PurpleBlistNode *blist = contact->child; blist; blist = blist->next) {
-					if (! PURPLE_BLIST_NODE_IS_BUDDY(blist)) {continue;}
-
-					PurpleBuddy *buddy = (PurpleBuddy *) blist;
-					plugin->buddies = g_slist_prepend(plugin->buddies, buddy);
-				}
-			}
-		}
-	}
 
 	return TRUE;
 }
