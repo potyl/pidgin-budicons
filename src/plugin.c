@@ -103,7 +103,6 @@ budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy);
 static void
 budicons_got_image_response (SoupSession *session, SoupMessage *message, gpointer data) {
 
-//	BudiconsPlugin *plugin = (BudiconsPlugin *) data;
 	PurpleBuddy *buddy = (PurpleBuddy *) data;
 
 	char *url = soup_uri_to_string(soup_message_get_uri(message), FALSE);
@@ -172,39 +171,9 @@ static void
 budicons_worker_got_image_response (SoupSession *session, SoupMessage *message, gpointer data) {
 
 	BudiconsWorker *worker = (BudiconsWorker *) data;
+	budicons_got_image_response(session, message, worker->buddy);
 
-	char *url = soup_uri_to_string(soup_message_get_uri(message), FALSE);
-	g_print("[%d] Soup: [%-3d] %s\n", worker->id, message->status_code, url);
-	g_free(url);
-
-	if (! SOUP_STATUS_IS_SUCCESSFUL (message->status_code)) {
-		goto next_user;
-	}
-
-
-	const char *mime = soup_message_headers_get_content_type(message->response_headers, NULL);
-	if (g_ascii_strncasecmp(mime, "image/", strlen("image/"))) {
-		// Wrong mime-type, this isn't an image
-		g_print("[%d] Soup: content-type '%s' doesn't correspond to an image\n", worker->id, mime);
-		goto next_user;
-	}
-
-
-	// Set the icon of the buddy
-	const char *content = message->response_body->data;
-	gsize length = (gsize) message->response_body->length;
-	char *icon = g_memdup(content, length);
-	purple_buddy_icons_set_for_user(
-		worker->buddy->account,
-		worker->buddy->name,
-		icon,
-		length,
-		NULL
-	);
-
-
-	// Free the current user and start working on the next user
-next_user:
+	// Start working on the next user
 	budicons_worker_iter(worker);
 }
 
