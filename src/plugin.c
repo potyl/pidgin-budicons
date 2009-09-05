@@ -54,11 +54,12 @@
 // Plugin's data
 //
 typedef struct _BudiconsPlugin {
-	SoupSession *session;
-	GHashTable  *users;
-	GSList      *buddies;
-	GSList      *buddy_iter; // Do not free as this is an iterator
-	gint        *workers;
+	PurplePlugin *purple;
+	SoupSession  *session;
+	GHashTable   *users;
+	GSList       *buddies;
+	GSList       *buddy_iter; // Do not free as this is an iterator
+	gint         *workers;
 } BudiconsPlugin;
 
 
@@ -70,7 +71,6 @@ typedef struct _BudiconsPlugin {
 //
 typedef struct _BudiconsWorker {
 	BudiconsPlugin  *plugin;
-	BudiconsUser    *user;  // Plugin's user
 	PurpleBuddy     *buddy; // Pidgin's user
 	guint            id;
 } BudiconsWorker;
@@ -84,10 +84,13 @@ static void
 budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer data);
 
 static void
-budicons_got_image_response (SoupSession *session, SoupMessage *message, gpointer data);
+budicons_worker_got_image_response (SoupSession *session, SoupMessage *message, gpointer data);
 
 static void
 budicons_worker_iter (BudiconsWorker *worker);
+
+static SoupMessage*
+budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy);
 
 
 //
@@ -100,6 +103,74 @@ budicons_worker_iter (BudiconsWorker *worker);
 //
 static void
 budicons_got_image_response (SoupSession *session, SoupMessage *message, gpointer data) {
+
+//	BudiconsPlugin *plugin = (BudiconsPlugin *) data;
+	PurpleBuddy *buddy = (PurpleBuddy *) data;
+
+	char *url = soup_uri_to_string(soup_message_get_uri(message), FALSE);
+	g_print("Soup: [%-3d] %s\n", message->status_code, url);
+	g_free(url);
+
+	if (! SOUP_STATUS_IS_SUCCESSFUL (message->status_code)) {
+		return;
+	}
+
+
+	const char *mime = soup_message_headers_get_content_type(message->response_headers, NULL);
+	if (g_ascii_strncasecmp(mime, "image/", strlen("image/"))) {
+		// Wrong mime-type, this isn't an image
+		g_print("Soup: content-type '%s' doesn't correspond to an image\n", mime);
+		return;
+	}
+
+
+	// Set the icon of the buddy
+	const char *content = message->response_body->data;
+	gsize length = (gsize) message->response_body->length;
+	char *icon = g_memdup(content, length);
+	purple_buddy_icons_set_for_user(
+		buddy->account,
+		buddy->name,
+		icon,
+		length,
+		NULL
+	);
+}
+
+
+
+//
+// Callback that's invoked each time that a buddy is added in Pidgin. This is
+// usually when the end user manually adds a new buddy.
+//
+// This callback will try to set the buddy name and icon.
+//
+//
+static void
+budicons_buddy_added_callback (PurpleBuddy *buddy, gpointer *data) {
+	BudiconsPlugin *plugin = (BudiconsPlugin *) data;
+
+	SoupMessage *message = budicons_buddy_update(plugin, buddy);
+	if (message != NULL) {
+		soup_session_queue_message(
+			plugin->session, message,
+			budicons_got_image_response,
+			buddy
+		);
+	}
+}
+
+
+//
+// Callback that's invoked each time that an user image has been downloaded.
+//
+// This function sets the buddy's icon based on the downloaded image, that is
+// assuming that the picture was successfully downloaded.
+//
+// This function always invokes a next iteration within the current worker.
+//
+static void
+budicons_worker_got_image_response (SoupSession *session, SoupMessage *message, gpointer data) {
 
 	BudiconsWorker *worker = (BudiconsWorker *) data;
 
@@ -140,6 +211,50 @@ next_user:
 
 
 //
+// This function updates a given buddy. It first looksup the the buddy in the
+// internal lookup table of buddies that where defined in the JSON file. If the
+// buddy can't be found then no processing is done. Otherwise the buddy's name
+// is changed unless if the buddy has already a name. Finally the buddy's icon
+// is downloaded unless if the buddy has already an icon. The buddy icon is
+// downloaded asynchronously.
+//
+// Returns a SoupMessage* if the buddy icon has been scheduled for a download.
+//
+static SoupMessage*
+budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy) {
+	// Take the next buddy/user to process
+	g_print("Buddy %s\n", buddy->name);
+
+	BudiconsUser *user = g_hash_table_lookup(plugin->users, buddy->name);
+	if (user == NULL) {return NULL;}
+
+	// Set the buddy's name (alias) if it's still unset
+	if (buddy->alias == NULL || EQ(buddy->name, buddy->alias)) {
+		g_print("Rename %s to %s\n", buddy->alias, user->name);
+		purple_blist_alias_buddy(buddy, user->name);
+	}
+
+	// Check if the buddy has already an image
+	PurpleBuddyIcon *icon = purple_buddy_icons_find(buddy->account, buddy->name);
+	if (icon != NULL) {
+		// This buddy has already an icon
+		purple_buddy_icon_unref(icon);
+		return NULL;
+	}
+
+	// Download the buddy's image since it doesn't have one (asynchronous)
+	SoupMessage *message = soup_message_new(SOUP_METHOD_GET, user->image);
+	if (message == NULL) {
+		g_print("Invalid URL %s for buddy %s\n", user->image, buddy->name);
+		return NULL;
+	}
+	g_print("Download of %s\n", user->image);
+	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
+	return message;
+}
+
+
+//
 // This function processes the next pidgin buddies in the global queue until one
 // of them requires an image download. Buddies will be renamed as they are
 // pulled from the queue.
@@ -156,41 +271,15 @@ static void
 budicons_worker_iter (BudiconsWorker *worker) {
 	BudiconsPlugin *plugin = (BudiconsPlugin *) worker->plugin;
 
-	// Take the next buddy/user to process
-	worker->user = NULL;
-
 	while (plugin->buddy_iter) {
 		// Take the next buddy/user to process
 		worker->buddy = plugin->buddy_iter->data;
 		plugin->buddy_iter = plugin->buddy_iter->next;
-		g_print("Buddy %s\n", worker->buddy->name);
 
-		worker->user = g_hash_table_lookup(plugin->users, worker->buddy->name);
-		if (worker->user == NULL) {continue;}
+		SoupMessage *message = budicons_buddy_update(plugin, worker->buddy);
+		if (message == NULL) {continue;}
 
-		// Set the buddy's name (alias) if it's still unset
-		if (worker->buddy->alias == NULL || EQ(worker->buddy->name, worker->buddy->alias)) {
-			g_print("[%d] Rename %s to %s\n", worker->id, worker->buddy->alias, worker->user->name);
-			purple_blist_alias_buddy(worker->buddy, worker->user->name);
-		}
-
-		// Check if the buddy has already an image
-		PurpleBuddyIcon *icon = purple_buddy_icons_find(worker->buddy->account, worker->buddy->name);
-		if (icon != NULL) {
-			// This buddy has already an icon
-			purple_buddy_icon_unref(icon);
-			continue;
-		}
-
-		// Download the buddy's image since it doesn't have one (asynchronous)
-		SoupMessage *message = soup_message_new(SOUP_METHOD_GET, worker->user->image);
-		if (message == NULL) {
-			g_print("Invalid URL %s for buddy %s\n", worker->user->image, worker->buddy->name);
-			continue;
-		}
-		g_print("[%d] Download of %s\n", worker->id, worker->user->image);
-		soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
-		soup_session_queue_message(plugin->session, message, budicons_got_image_response, worker);
+		soup_session_queue_message(plugin->session, message, budicons_worker_got_image_response, worker);
 		return;
 	}
 
@@ -206,7 +295,9 @@ budicons_worker_iter (BudiconsWorker *worker) {
 // Callback that's invoked once the main JSON file is downloaded.
 //
 // If the SoupMessage returns a successful response then this callback will
-// trigger the processing of the users asynchronously.
+// trigger the processing of the users asynchronously. It will also register a
+// a callback that will process all new buddies that are added while Pidgin is
+// running.
 //
 static void
 budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer data) {
@@ -266,6 +357,16 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 		// We have workers running
 		quit = FALSE;
 	}
+
+
+	// Register a callback for every new buddy added
+	purple_signal_connect(
+		purple_blist_get_handle(),
+		"buddy-added",
+		plugin->purple,
+		PURPLE_CALLBACK(budicons_buddy_added_callback),
+		plugin
+	);
 }
 
 
@@ -284,6 +385,7 @@ budicons_plugin_load (PurplePlugin *purple) {
 		return FALSE;
 	}
 	plugin->session = soup_session_async_new();
+	plugin->purple = purple;
 
 
 	// Download the JSON file (asynchronously)
@@ -301,7 +403,10 @@ budicons_plugin_load (PurplePlugin *purple) {
 //	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
 	soup_session_queue_message(plugin->session, message, budicons_got_json_response, plugin);
 
-
+//FIXME don't build the list yet. Wait for the JSON file to be downloaded. If
+//      the download fails then there's nothing to do. If the download is
+//      successful and users are added in the meanwhile there's nothing that we
+//      can do.
 	// Find the buddies to process
 	PurpleBuddyList *list = purple_get_blist();
 	if (list != NULL) {
