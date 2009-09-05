@@ -1,6 +1,6 @@
 # Compiler stuff
 CC     = gcc
-CFLAGS = -O0 -g3 -std=c99 -I. \
+CFLAGS = -O2 -g0 -std=c99 -I. \
  -Werror \
  -Wall \
  -Wextra \
