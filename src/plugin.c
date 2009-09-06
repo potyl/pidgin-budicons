@@ -235,16 +235,26 @@ budicons_worker_iter (BudiconsWorker *worker) {
 		plugin->buddy_iter = plugin->buddy_iter->next;
 
 		SoupMessage *message = budicons_buddy_update(plugin, worker->buddy);
-		if (message == NULL) {continue;}
+		if (message != NULL) {
+			// Start the download of the icon and suspend the worker (by
+			// returning from the function) once the download will finish the
+			// worker will resume it's work (this function will be called once
+			// more).
+			soup_session_queue_message(
+				plugin->session,
+				message,
+				budicons_worker_got_image_response,
+				worker
+			);
 
-		soup_session_queue_message(plugin->session, message, budicons_worker_got_image_response, worker);
-		return;
+			// Suspend the worker
+			return;
+		}
 	}
 
 	// End of this worker as there are no more users to process
 	g_print("[%d] End of worker\n", worker->id);
 	g_free(worker);
-	return;
 }
 
 
