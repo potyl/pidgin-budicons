@@ -28,10 +28,11 @@
 #include "gtkutils.h"
 
 // Plugin preferences
-#define PLUGIN_PREFS_BASE       "/plugins/" PLUGIN_ID_TYPE "/" PLUGIN_ID_NAME
-#define PLUGIN_PREFS(path)      PLUGIN_PREFS_BASE "/" path
-#define PLUGIN_PREFS_URL_JSON   PLUGIN_PREFS("url_json")
-#define PLUGIN_PREFS_WORKERS    PLUGIN_PREFS("workers")
+#define PLUGIN_PREFS_BASE                  "/plugins/" PLUGIN_ID_TYPE "/" PLUGIN_ID_NAME
+#define PLUGIN_PREFS(path)                 PLUGIN_PREFS_BASE "/" path
+#define PLUGIN_PREFS_URL_JSON              PLUGIN_PREFS("url_json")
+#define PLUGIN_PREFS_WORKERS               PLUGIN_PREFS("workers")
+#define PLUGIN_PREFS_FORCE_ICON_DOWNLOAD   PLUGIN_PREFS("force_icon_download")
 
 
 //
@@ -45,6 +46,7 @@ budicons_prefs_init () {
 
 	purple_prefs_add_string(PLUGIN_PREFS_URL_JSON, CONF_URL_JSON);
 	purple_prefs_add_int(PLUGIN_PREFS_WORKERS, CONF_WORKERS);
+	purple_prefs_add_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD, FALSE);
 }
 
 
@@ -74,6 +76,16 @@ budicons_prefs_get_url_json () {
 
 
 //
+// Returns the TRUE if the buddy icon should always be downloaded. The value is
+// taken from the Pidgin configuration.
+//
+gboolean
+budicons_prefs_get_force_icon_download () {
+	return purple_prefs_get_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD);
+}
+
+
+//
 // Create a preference row in the configuration dialog.
 //
 static void
@@ -90,7 +102,7 @@ budicons_pref_row (GtkWidget *table, const char* text, GtkWidget *widget, guint 
 
 
 //
-// This callback gets called when the number of workgers gets changed in the
+// This callback gets called when the number of workers gets changed in the
 // configuration window.
 //
 static void
@@ -112,6 +124,17 @@ budicons_pref_json_url_changed_callback (GtkEditable *editable, gpointer user_da
 
 
 //
+// This callback gets called when the force icon download value gets changed in
+// the configuration window.
+//
+static void
+budicons_pref_force_icon_download_changed_callback (GtkToggleButton *togglebutton, gpointer user_data) {
+	gboolean force = gtk_toggle_button_get_active(togglebutton);
+	purple_prefs_set_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD, force);
+}
+
+
+//
 // GUI for the plugin preferences.
 //
 static GtkWidget*
@@ -129,43 +152,69 @@ budicons_pref_frame (PurplePlugin *plugin) {
 
 
 	// Row with the JSON file
-	const gchar *url = budicons_prefs_get_url_json();
-	if (url == NULL) {
-		url = "";
+	{
+		const gchar *url = budicons_prefs_get_url_json();
+		if (url == NULL) {
+			url = "";
+		}
+		GtkWidget *url_ui = gtk_entry_new();
+		gtk_entry_set_text(GTK_ENTRY(url_ui), url);
+		budicons_pref_row(
+			table,
+			"URL of the JSON file",
+			url_ui,
+			top++, bottom++
+		);
+		g_signal_connect(
+			G_OBJECT(url_ui),
+			"changed",
+			G_CALLBACK(budicons_pref_json_url_changed_callback),
+			NULL
+		);
 	}
-	GtkWidget *url_ui = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(url_ui), url);
-	budicons_pref_row(
-		table,
-		"URL of the JSON file",
-		url_ui,
-		top++, bottom++
-	);
-	g_signal_connect(
-		G_OBJECT(url_ui),
-		"changed",
-		G_CALLBACK(budicons_pref_json_url_changed_callback),
-		NULL
-	);
-
 
 	// Row with the number of workers
-	GtkObject *adjustment = gtk_adjustment_new(5, 1, 16, 1, 0, 0);
-	GtkWidget *worker_ui = gtk_spin_button_new(GTK_ADJUSTMENT(adjustment), 0, 0);
-	guint workers = budicons_prefs_get_workers();
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(worker_ui), workers);
-	budicons_pref_row(
-		table,
-		"Number of simultaneous downloads",
-		worker_ui,
-		top++, bottom++
-	);
-	g_signal_connect(
-		G_OBJECT(worker_ui),
-		"value-changed",
-		G_CALLBACK(budicons_pref_workers_changed_callback),
-		NULL
-	);
+	{
+		GtkObject *adjustment = gtk_adjustment_new(5, 1, 16, 1, 0, 0);
+		GtkWidget *worker_ui = gtk_spin_button_new(GTK_ADJUSTMENT(adjustment), 0, 0);
+		guint workers = budicons_prefs_get_workers();
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(worker_ui), workers);
+		budicons_pref_row(
+			table,
+			"Number of simultaneous downloads",
+			worker_ui,
+			top++, bottom++
+		);
+		g_signal_connect(
+			G_OBJECT(worker_ui),
+			"value-changed",
+			G_CALLBACK(budicons_pref_workers_changed_callback),
+			NULL
+		);
+	}
+
+
+	// Row with the check for forcing the download of the icons at each execution
+	{
+		GtkWidget *force_ui = gtk_check_button_new_with_label("Always redownload icons");
+		gboolean force = budicons_prefs_get_force_icon_download();
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(force_ui), force);
+		budicons_pref_row(
+			table,
+			"Download the buddy icons each time",
+			force_ui,
+			top++, bottom++
+		);
+		g_signal_connect(
+			G_OBJECT(force_ui),
+			"toggled",
+			G_CALLBACK(budicons_pref_force_icon_download_changed_callback),
+			NULL
+		);
+	}
+
+
+
 
 	gtk_widget_show_all(ui);
 	return ui;

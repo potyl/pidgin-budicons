@@ -32,6 +32,9 @@ budicons_prefs_get_workers (void);
 const gchar*
 budicons_prefs_get_url_json (void);
 
+gboolean
+budicons_prefs_get_force_icon_download (void);
+
 PidginPluginUiInfo budicons_prefs_info;
 
 #endif
