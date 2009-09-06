@@ -38,8 +38,6 @@
 #include "version.h"
 #include "buddyicon.h"
 #include "pidgin.h"
-#include "gtkutils.h"
-#include "gtkplugin.h"
 
 
 //
