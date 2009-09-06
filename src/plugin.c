@@ -195,10 +195,14 @@ budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy) {
 	// Check if the buddy has already an image
 	if (user->image == NULL) {return NULL;}
 	PurpleBuddyIcon *icon = purple_buddy_icons_find(buddy->account, buddy->name);
+	gboolean force_download = budicons_prefs_get_force_icon_download();
 	if (icon != NULL) {
 		// This buddy has already an icon
 		purple_buddy_icon_unref(icon);
-		return NULL;
+		if (!force_download) {
+			// Don't redownload the icon once more
+			return NULL;
+		}
 	}
 
 	// Download the buddy's image since it doesn't have one (asynchronous)
