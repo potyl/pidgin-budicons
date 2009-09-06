@@ -60,9 +60,6 @@
 
 #define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
 
-#define PURPLE_PLUGIN_PREF_FRAME_CALLBACK(callback) ((PurplePluginPrefFrameCallback) (callback))
-typedef PurplePluginPrefFrame* (*PurplePluginPrefFrameCallback) (PurplePlugin *plugin);
-
 
 //
 // Plugin's data
@@ -451,7 +448,7 @@ budicons_plugin_init (PurplePlugin *purple) {
 
 
 static void
-budicons_plugin_pref_row (GtkWidget *table, const char* text, GtkWidget *widget, guint top, guint bottom) {
+budicons_pref_row (GtkWidget *table, const char* text, GtkWidget *widget, guint top, guint bottom) {
 
 	// Row with the number of workers
 	GtkWidget *label = gtk_label_new(text);
@@ -468,7 +465,7 @@ budicons_plugin_pref_row (GtkWidget *table, const char* text, GtkWidget *widget,
 // configuration window.
 //
 static void
-budicons_plugin_pref_workers_value_changed_callback (GtkSpinButton *spinbutton, gpointer user_data) {
+budicons_pref_workers_changed_callback (GtkSpinButton *spinbutton, gpointer user_data) {
 	gint workers = gtk_spin_button_get_value_as_int(spinbutton);
 	purple_prefs_set_int(PLUGIN_PREFS_WORKERS, workers);
 }
@@ -479,7 +476,7 @@ budicons_plugin_pref_workers_value_changed_callback (GtkSpinButton *spinbutton, 
 // configuration window.
 //
 static void
-budicons_plugin_pref_json_url_value_changed_callback (GtkEditable *editable, gpointer user_data) {
+budicons_pref_json_url_changed_callback (GtkEditable *editable, gpointer user_data) {
 	const gchar *url = gtk_entry_get_text(GTK_ENTRY(editable));
 	purple_prefs_set_string(PLUGIN_PREFS_URL_JSON, url);
 }
@@ -489,7 +486,7 @@ budicons_plugin_pref_json_url_value_changed_callback (GtkEditable *editable, gpo
 // GUI for the plugin preferences
 //
 static GtkWidget*
-budicons_plugin_pref_frame (PurplePlugin *plugin) {
+budicons_pref_frame (PurplePlugin *plugin) {
 
 	GtkWidget *ui = gtk_vbox_new(FALSE, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ui), 12);
@@ -509,7 +506,7 @@ budicons_plugin_pref_frame (PurplePlugin *plugin) {
 	}
 	GtkWidget *url_ui = gtk_entry_new();
 	gtk_entry_set_text(GTK_ENTRY(url_ui), url);
-	budicons_plugin_pref_row(
+	budicons_pref_row(
 		table,
 		"URL of the JSON file",
 		url_ui,
@@ -518,7 +515,7 @@ budicons_plugin_pref_frame (PurplePlugin *plugin) {
 	g_signal_connect(
 		G_OBJECT(url_ui),
 		"changed",
-		G_CALLBACK(budicons_plugin_pref_json_url_value_changed_callback),
+		G_CALLBACK(budicons_pref_json_url_changed_callback),
 		NULL
 	);
 
@@ -532,7 +529,7 @@ budicons_plugin_pref_frame (PurplePlugin *plugin) {
 		workers = 1;
 	}
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(worker_ui), workers);
-	budicons_plugin_pref_row(
+	budicons_pref_row(
 		table,
 		"Number of simultaneous downloads",
 		worker_ui,
@@ -541,7 +538,7 @@ budicons_plugin_pref_frame (PurplePlugin *plugin) {
 	g_signal_connect(
 		G_OBJECT(worker_ui),
 		"value-changed",
-		G_CALLBACK(budicons_plugin_pref_workers_value_changed_callback),
+		G_CALLBACK(budicons_pref_workers_changed_callback),
 		NULL
 	);
 
@@ -554,7 +551,7 @@ budicons_plugin_pref_frame (PurplePlugin *plugin) {
 // Purple plugin preferences dialog
 //
 static PidginPluginUiInfo budicons_ui_info = {
-	budicons_plugin_pref_frame,
+	budicons_pref_frame,
 	0,    // Reserverd for page_num
 
 	NULL, // Reserved 1
