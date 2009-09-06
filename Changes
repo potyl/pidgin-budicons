@@ -1,5 +1,11 @@
+0.0.4 Sun Sep  6 22:03:17 CEST 2009
+    - New configuration dialog.
+    - The number of workers is configurable at runtime.
+    - The pictrures can be forced to be redownloaded at each execution.
+
+
 0.0.3 Sun Sep  6 00:56:36 CEST 2009
-    - Update the name and icon of new buddies (manually added).
+    - Update the name and icon of newly added buddies.
 
 
 0.0.2 Mon Aug 31 21:45:34 CEST 2009

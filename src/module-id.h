@@ -21,7 +21,7 @@
 
 // Plugin details
 #define PLUGIN_NAME "Buddy Icons Download"
-#define PLUGIN_VERSION  "0.0.3"
+#define PLUGIN_VERSION  "0.0.4"
 #define PLUGIN_ID_TYPE  "core"
 #define PLUGIN_ID_USER  "potyl"
 #define PLUGIN_ID_NAME  "budicons"
