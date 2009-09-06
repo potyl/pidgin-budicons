@@ -179,11 +179,11 @@ budicons_worker_got_image_response (SoupSession *session, SoupMessage *message, 
 
 
 //
-// This function updates a given buddy. It first looksup the the buddy in the
-// internal lookup table of buddies that where defined in the JSON file. If the
-// buddy can't be found then no processing is done. Otherwise the buddy's name
-// is changed unless if the buddy has already a name. Finally the buddy's icon
-// is downloaded unless if the buddy has already an icon. The buddy icon is
+// This function updates a given buddy. It first does a lookup the the buddy in
+// the internal lookup table of buddies that where defined in the JSON file. If
+// the buddy can't be found then no processing is done. Otherwise the buddy's
+// name is changed unless if the buddy has already a name. Finally the buddy's
+// icon is downloaded unless if the buddy has already an icon. The buddy icon is
 // downloaded asynchronously.
 //
 // Returns a SoupMessage* if the buddy icon has been scheduled for a download.
