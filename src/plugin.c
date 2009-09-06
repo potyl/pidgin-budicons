@@ -22,6 +22,8 @@
 
 #include "module-json.h"
 #include "module-user.h"
+#include "module-prefs.h"
+#include "module-id.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,26 +39,6 @@
 #include "pidgin.h"
 #include "gtkutils.h"
 #include "gtkplugin.h"
-
-// Plugin details
-#define PLUGIN_NAME "Buddy Icons Download"
-#define PLUGIN_VERSION  "0.0.3"
-#define PLUGIN_ID_TYPE  "core"
-#define PLUGIN_ID_USER  "potyl"
-#define PLUGIN_ID_NAME  "budicons"
-#define PLUGIN_ID       PLUGIN_ID_TYPE "-" PLUGIN_ID_USER "-" PLUGIN_ID_NAME
-
-// Plugin preferences
-#define PLUGIN_PREFS_BASE       "/plugins/" PLUGIN_ID_TYPE "/" PLUGIN_ID_NAME
-#define PLUGIN_PREFS(path)      PLUGIN_PREFS_BASE "/" path
-#define PLUGIN_PREFS_URL_JSON   PLUGIN_PREFS("url_json")
-#define PLUGIN_PREFS_WORKERS    PLUGIN_PREFS("workers")
-
-#define PLUGIN_PREFS_FRAME(frame, name, label) \
-	purple_plugin_pref_frame_add( \
-		frame, \
-		purple_plugin_pref_new_with_name_and_label(PLUGIN_PREFS_##name, label) \
-	);
 
 #define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
 
@@ -348,11 +330,7 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 
 	// Start a few workers that will process the buddies registered so far
 	plugin->buddy_iter = plugin->buddies;
-	size_t workers = (size_t) purple_prefs_get_int(PLUGIN_PREFS_WORKERS);
-	if (workers < 1) {
-		g_print("Got %d workers, chaning the number to 1\n", workers);
-		workers = 1;
-	}
+	guint workers = budicons_prefs_get_workers();
 	for (guint i = 0; i < workers; ++i) {
 
 		// No more buddies to process
@@ -388,8 +366,8 @@ budicons_plugin_load (PurplePlugin *purple) {
 
 
 	// Download the JSON file (asynchronously)
-	const gchar *url = purple_prefs_get_string(PLUGIN_PREFS_URL_JSON);
-	if (url == NULL || EQ(url, "")) {
+	const gchar *url = budicons_prefs_get_url_json();
+	if (url == NULL) {
 		g_print("No CONF_URL_JSON was provided\n");
 		return TRUE;
 	}
@@ -438,127 +416,8 @@ budicons_plugin_unload (PurplePlugin *purple) {
 //
 static void
 budicons_plugin_init (PurplePlugin *purple) {
-
-	// Create the section
-	purple_prefs_add_none(PLUGIN_PREFS_BASE);
-
-	purple_prefs_add_string(PLUGIN_PREFS_URL_JSON, CONF_URL_JSON);
-	purple_prefs_add_int(PLUGIN_PREFS_WORKERS, CONF_WORKERS);
+	budicons_prefs_init();
 }
-
-
-static void
-budicons_pref_row (GtkWidget *table, const char* text, GtkWidget *widget, guint top, guint bottom) {
-
-	// Row with the number of workers
-	GtkWidget *label = gtk_label_new(text);
-	gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
-	gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.0);
-
-	gtk_table_attach_defaults(GTK_TABLE(table), label, 0, 1, top, bottom);
-	gtk_table_attach_defaults(GTK_TABLE(table), widget, 1, 2, top, bottom);
-}
-
-
-//
-// This callback gets called when the number of workgers gets changed in the
-// configuration window.
-//
-static void
-budicons_pref_workers_changed_callback (GtkSpinButton *spinbutton, gpointer user_data) {
-	gint workers = gtk_spin_button_get_value_as_int(spinbutton);
-	purple_prefs_set_int(PLUGIN_PREFS_WORKERS, workers);
-}
-
-
-//
-// This callback gets called when the URL of the JSON file gets changed in the
-// configuration window.
-//
-static void
-budicons_pref_json_url_changed_callback (GtkEditable *editable, gpointer user_data) {
-	const gchar *url = gtk_entry_get_text(GTK_ENTRY(editable));
-	purple_prefs_set_string(PLUGIN_PREFS_URL_JSON, url);
-}
-
-
-//
-// GUI for the plugin preferences
-//
-static GtkWidget*
-budicons_pref_frame (PurplePlugin *plugin) {
-
-	GtkWidget *ui = gtk_vbox_new(FALSE, 18);
-	gtk_container_set_border_width(GTK_CONTAINER(ui), 12);
-
-	GtkWidget *frame = pidgin_make_frame(ui, "Buddy icons download");
-
-	GtkWidget *table = gtk_table_new(2, 2, TRUE);
-	gtk_container_add(GTK_CONTAINER(frame), table);
-
-	guint top = 0, bottom = 1;
-
-
-	// Row with the JSON file
-	const gchar *url = purple_prefs_get_string(PLUGIN_PREFS_URL_JSON);
-	if (url == NULL || EQ(url, "")) {
-		url = "";
-	}
-	GtkWidget *url_ui = gtk_entry_new();
-	gtk_entry_set_text(GTK_ENTRY(url_ui), url);
-	budicons_pref_row(
-		table,
-		"URL of the JSON file",
-		url_ui,
-		top++, bottom++
-	);
-	g_signal_connect(
-		G_OBJECT(url_ui),
-		"changed",
-		G_CALLBACK(budicons_pref_json_url_changed_callback),
-		NULL
-	);
-
-
-// FIXME refactor prefs_get_* into functions and reuse them
-	// Row with the number of workers
-	GtkObject *adjustment = gtk_adjustment_new(5, 1, 16, 1, 0, 0);
-	GtkWidget *worker_ui = gtk_spin_button_new(GTK_ADJUSTMENT(adjustment), 0, 0);
-	size_t workers = (size_t) purple_prefs_get_int(PLUGIN_PREFS_WORKERS);
-	if (workers < 1) {
-		workers = 1;
-	}
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(worker_ui), workers);
-	budicons_pref_row(
-		table,
-		"Number of simultaneous downloads",
-		worker_ui,
-		top++, bottom++
-	);
-	g_signal_connect(
-		G_OBJECT(worker_ui),
-		"value-changed",
-		G_CALLBACK(budicons_pref_workers_changed_callback),
-		NULL
-	);
-
-	gtk_widget_show_all(ui);
-	return ui;
-}
-
-
-//
-// Purple plugin preferences dialog
-//
-static PidginPluginUiInfo budicons_ui_info = {
-	budicons_pref_frame,
-	0,    // Reserverd for page_num
-
-	NULL, // Reserved 1
-	NULL, // Reserved 2
-	NULL, // Reserved 3
-	NULL, // Reserved 4
-};
 
 
 //
@@ -591,7 +450,7 @@ static PurplePluginInfo budicons_info = {
 	budicons_plugin_unload,
 	NULL,
 
-	&budicons_ui_info,    // ui_info
+	&budicons_prefs_info, // ui_info
 	NULL,                 // extra_info
 	NULL,                 // prefs_info
 	NULL,                 // actions callback
