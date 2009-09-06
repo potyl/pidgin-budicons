@@ -47,6 +47,13 @@
 #define PLUGIN_PREFS_BASE       "/plugins/" PLUGIN_ID_TYPE "/" PLUGIN_ID_NAME
 #define PLUGIN_PREFS(path)      PLUGIN_PREFS_BASE "/" path
 #define PLUGIN_PREFS_URL_JSON   PLUGIN_PREFS("url_json")
+#define PLUGIN_PREFS_WORKERS    PLUGIN_PREFS("workers")
+
+#define PLUGIN_PREFS_FRAME(frame, name, label) \
+	purple_plugin_pref_frame_add( \
+		frame, \
+		purple_plugin_pref_new_with_name_and_label(PLUGIN_PREFS_##name, label) \
+	);
 
 #define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
 
@@ -337,7 +344,12 @@ budicons_got_json_response (SoupSession *session, SoupMessage *message, gpointer
 
 	// Start a few workers that will process the buddies registered so far
 	plugin->buddy_iter = plugin->buddies;
-	for (guint i = 0; i < CONF_WORKERS; ++i) {
+	size_t workers = (size_t) purple_prefs_get_int(PLUGIN_PREFS_WORKERS);
+	if (workers < 1) {
+		g_print("Got %d workers, chaning the number to 1\n", workers);
+		workers = 1;
+	}
+	for (guint i = 0; i < workers; ++i) {
 
 		// No more buddies to process
 		if (plugin->buddy_iter == NULL) {break;}
@@ -427,8 +439,7 @@ budicons_plugin_init (PurplePlugin *purple) {
 	purple_prefs_add_none(PLUGIN_PREFS_BASE);
 
 	purple_prefs_add_string(PLUGIN_PREFS_URL_JSON, CONF_URL_JSON);
-
-	return;
+	purple_prefs_add_int(PLUGIN_PREFS_WORKERS, CONF_WORKERS);
 }
 
 
@@ -443,8 +454,9 @@ budicons_pref_frame (PurplePlugin *plugin) {
 	// Frame title
 	purple_plugin_pref_frame_add(frame, purple_plugin_pref_new_with_label(PLUGIN_NAME));
 
-	// JSON URL
-	purple_plugin_pref_frame_add(frame, purple_plugin_pref_new_with_name_and_label(PLUGIN_PREFS_URL_JSON, "JSON URL"));
+	// Configuration fields
+	PLUGIN_PREFS_FRAME(frame, URL_JSON, "JSON URL");
+	PLUGIN_PREFS_FRAME(frame, WORKERS, "Number of workers (parallel downloads)");
 
 	return frame;
 }
