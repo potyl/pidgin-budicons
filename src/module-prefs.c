@@ -132,8 +132,8 @@ budicons_pref_frame (PurplePlugin *plugin) {
 
 
 	// Row with the JSON file
-	const gchar *url = purple_prefs_get_string(PLUGIN_PREFS_URL_JSON);
-	if (url == NULL || EQ(url, "")) {
+	const gchar *url = budicons_prefs_get_url_json();
+	if (url == NULL) {
 		url = "";
 	}
 	GtkWidget *url_ui = gtk_entry_new();
@@ -152,14 +152,10 @@ budicons_pref_frame (PurplePlugin *plugin) {
 	);
 
 
-// FIXME refactor prefs_get_* into functions and reuse them
 	// Row with the number of workers
 	GtkObject *adjustment = gtk_adjustment_new(5, 1, 16, 1, 0, 0);
 	GtkWidget *worker_ui = gtk_spin_button_new(GTK_ADJUSTMENT(adjustment), 0, 0);
-	size_t workers = (size_t) purple_prefs_get_int(PLUGIN_PREFS_WORKERS);
-	if (workers < 1) {
-		workers = 1;
-	}
+	guint workers = budicons_prefs_get_workers();
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(worker_ui), workers);
 	budicons_pref_row(
 		table,
