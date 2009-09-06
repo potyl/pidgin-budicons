@@ -22,6 +22,7 @@
 
 #include "module-prefs.h"
 #include "module-id.h"
+#include "module-utils.h"
 
 #include "pidgin.h"
 #include "gtkutils.h"
@@ -31,10 +32,6 @@
 #define PLUGIN_PREFS(path)      PLUGIN_PREFS_BASE "/" path
 #define PLUGIN_PREFS_URL_JSON   PLUGIN_PREFS("url_json")
 #define PLUGIN_PREFS_WORKERS    PLUGIN_PREFS("workers")
-
-#define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
-
-
 
 
 //

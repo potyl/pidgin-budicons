@@ -24,6 +24,7 @@
 #include "module-user.h"
 #include "module-prefs.h"
 #include "module-id.h"
+#include "module-utils.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -39,8 +40,6 @@
 #include "pidgin.h"
 #include "gtkutils.h"
 #include "gtkplugin.h"
-
-#define EQ(str1, str2) (g_strcmp0((str1), (str2)) == 0)
 
 
 //
