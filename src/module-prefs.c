@@ -196,12 +196,12 @@ budicons_pref_frame (PurplePlugin *plugin) {
 
 	// Row with the check for forcing the download of the icons at each execution
 	{
-		GtkWidget *force_ui = gtk_check_button_new_with_label("Always redownload icons");
+		GtkWidget *force_ui = gtk_check_button_new_with_label("After each execution");
 		gboolean force = budicons_prefs_get_force_icon_download();
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(force_ui), force);
 		budicons_pref_row(
 			table,
-			"Download the buddy icons each time",
+			"How often should the icons be downloaded?",
 			force_ui,
 			top++, bottom++
 		);
