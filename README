@@ -9,10 +9,14 @@ names and icons to use for your buddies.
 Compiling and installing
 ------------------------
 
-Before the plugin can be compile it's important to edit the file "config.h"and
-to update the variable holding the location of the JSON file (CONF_URL_JSON).
+Before the plugin can be compiled it could be useful to edit the file
+"config.h" and to update the variable holding the location of the JSON file:
 
     #define CONF_URL_JSON "https://localhost/buddies.json"
+
+This is not mandatory as this version of the plugin allows the JSON file to be
+updated at runtime through the plugin's configuration dialog that's accessible
+from Pidgin's "Plugins" dialog.
 
 To compile under Ubuntu/Debian do:
 
