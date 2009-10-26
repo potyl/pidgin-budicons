@@ -1,3 +1,7 @@
+0.0.5 Mon Oct 26 18:10:41 CET 2009
+    - Don't crash if a JSON user has no id.
+
+
 0.0.4 Sun Sep  6 22:03:17 CEST 2009
     - New configuration dialog.
     - The number of workers is configurable at runtime.
