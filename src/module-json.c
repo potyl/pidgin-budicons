@@ -90,8 +90,11 @@ budicons_json_parse_users (const gchar *data, gssize length, GError **error) {
 	for (GList *iter = list; iter != NULL; iter = iter->next) {
 		JsonNode *node = (JsonNode*) iter->data;
 		BudiconsUser *user = budicons_json_get_user(node);
-		if (user) {
+		if (user && user->id) {
 			g_hash_table_insert(users, user->id, user);			
+		}
+		else {
+			budicons_user_free(user);
 		}
 	}
 	g_list_free(list);
