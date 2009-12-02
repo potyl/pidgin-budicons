@@ -187,7 +187,8 @@ budicons_buddy_update (BudiconsPlugin *plugin, PurpleBuddy *buddy) {
 	if (user == NULL) {return NULL;}
 
 	// Set the buddy's name (alias) if it's still unset
-	if (buddy->alias == NULL || EQ(buddy->name, buddy->alias)) {
+	gboolean force_rename = budicons_prefs_get_force_name_update();
+	if (force_rename || buddy->alias == NULL || EQ(buddy->name, buddy->alias)) {
 		g_print("Rename %s to %s\n", buddy->alias, user->name);
 		purple_blist_alias_buddy(buddy, user->name);
 	}
