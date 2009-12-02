@@ -33,6 +33,7 @@
 #define PLUGIN_PREFS_URL_JSON              PLUGIN_PREFS("url_json")
 #define PLUGIN_PREFS_WORKERS               PLUGIN_PREFS("workers")
 #define PLUGIN_PREFS_FORCE_ICON_DOWNLOAD   PLUGIN_PREFS("force_icon_download")
+#define PLUGIN_PREFS_FORCE_NAME_UPDATE     PLUGIN_PREFS("force_name_update")
 
 
 //
@@ -47,6 +48,7 @@ budicons_prefs_init () {
 	purple_prefs_add_string(PLUGIN_PREFS_URL_JSON, CONF_URL_JSON);
 	purple_prefs_add_int(PLUGIN_PREFS_WORKERS, CONF_WORKERS);
 	purple_prefs_add_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD, FALSE);
+	purple_prefs_add_bool(PLUGIN_PREFS_FORCE_NAME_UPDATE, FALSE);
 }
 
 
@@ -82,6 +84,16 @@ budicons_prefs_get_url_json () {
 gboolean
 budicons_prefs_get_force_icon_download () {
 	return purple_prefs_get_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD);
+}
+
+
+//
+// Returns the TRUE if the buddy name should always be update. The value is
+// taken from the Pidgin configuration.
+//
+gboolean
+budicons_prefs_get_force_name_update () {
+	return purple_prefs_get_bool(PLUGIN_PREFS_FORCE_NAME_UPDATE);
 }
 
 
@@ -131,6 +143,17 @@ static void
 budicons_pref_force_icon_download_changed_callback (GtkToggleButton *togglebutton, gpointer user_data) {
 	gboolean force = gtk_toggle_button_get_active(togglebutton);
 	purple_prefs_set_bool(PLUGIN_PREFS_FORCE_ICON_DOWNLOAD, force);
+}
+
+
+//
+// This callback gets called when the force update of the buddy names value gets changed in
+// the configuration window.
+//
+static void
+budicons_pref_force_name_update_changed_callback (GtkToggleButton *togglebutton, gpointer user_data) {
+	gboolean force = gtk_toggle_button_get_active(togglebutton);
+	purple_prefs_set_bool(PLUGIN_PREFS_FORCE_NAME_UPDATE, force);
 }
 
 
@@ -209,6 +232,26 @@ budicons_pref_frame (PurplePlugin *plugin) {
 			G_OBJECT(force_ui),
 			"toggled",
 			G_CALLBACK(budicons_pref_force_icon_download_changed_callback),
+			NULL
+		);
+	}
+
+
+	// Row with the check for forcing the update of the user names at each execution
+	{
+		GtkWidget *force_ui = gtk_check_button_new_with_label("At each execution");
+		gboolean force = budicons_prefs_get_force_name_update();
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(force_ui), force);
+		budicons_pref_row(
+			table,
+			"How often should the buddy names be updated?",
+			force_ui,
+			top++, bottom++
+		);
+		g_signal_connect(
+			G_OBJECT(force_ui),
+			"toggled",
+			G_CALLBACK(budicons_pref_force_name_update_changed_callback),
 			NULL
 		);
 	}
