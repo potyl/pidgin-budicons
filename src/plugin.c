@@ -242,7 +242,7 @@ budicons_worker_iter (BudiconsWorker *worker) {
 		if (message != NULL) {
 			// Start the download of the icon and suspend the worker (by
 			// returning from the function) once the download will finish the
-			// worker will resume it's work (this function will be called once
+			// worker will resume its work (this function will be called once
 			// more).
 			soup_session_queue_message(
 				plugin->session,
